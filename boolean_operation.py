@@ -1,5 +1,9 @@
-import vtk
 import sys
+
+import numpy as np
+import pymeshfix
+import vtk
+from vtk.util import numpy_support
 
 
 def show_polydatas(polydatas, colors=[]):
@@ -27,6 +31,42 @@ def show_polydatas(polydatas, colors=[]):
     iren.SetRenderWindow(ren_win)
     iren.Start()
 
+
+def polydata_to_numpy(polydata):
+    vertices = numpy_support.vtk_to_numpy(polydata.GetPoints().GetData())
+    vertices.shape = -1, 3
+
+    faces = numpy_support.vtk_to_numpy(polydata.GetPolys().GetData())
+    faces.shape = -1, 4
+
+    return vertices, faces
+
+
+def numpy_to_polydata(vertices, faces):
+    _faces = np.empty_like(faces, shape=(faces.shape[0], 4), dtype=np.int64)
+    _faces[:, 0] = 3
+    _faces[:, 1:] = faces
+
+    points = vtk.vtkPoints()
+    points.SetData(numpy_support.numpy_to_vtk(vertices))
+
+    id_triangles = numpy_support.numpy_to_vtkIdTypeArray(_faces)
+    triangles = vtk.vtkCellArray()
+    triangles.SetCells(_faces.shape[0], id_triangles)
+
+    polydata = vtk.vtkPolyData()
+    polydata.SetPoints(points)
+    polydata.SetPolys(triangles)
+
+    return polydata
+
+
+def fix_polydata(polydata):
+    vertices, faces = polydata_to_numpy(polydata)
+    meshfix = pymeshfix.MeshFix(vertices, faces[:, 1:])
+    meshfix.repair()
+    fixed_polydata = numpy_to_polydata(meshfix.v, meshfix.f)
+    return fixed_polydata
 
 
 def apply_boolean_operation(polydata1, polydata2, operation="difference"):
@@ -71,17 +111,18 @@ def main():
     reader.Update()
 
     polydata1 = reader.GetOutput()
+    polydata1 = fix_polydata(polydata1)
 
     xi, xf, yi, yf, zi, zf = polydata1.GetBounds()
-    center = ((xf + xi)/2.0, (yf + yi)/2.0, (zf + zi)/2.0)
-    diagonal_size = ((xf - xi)**2 + (yf - yi)**2.0 + (zf - zi)**2)**0.5
+    center = ((xf + xi) / 2.0, (yf + yi) / 2.0, (zf + zi) / 2.0)
+    diagonal_size = ((xf - xi) ** 2 + (yf - yi) ** 2.0 + (zf - zi) ** 2) ** 0.5
     polydata2 = create_sphere(center, diagonal_size * 0.23)
 
     polydata3 = apply_boolean_operation(polydata1, polydata2)
 
-    show_polydatas([polydata3,])
-
-
+    show_polydatas(
+        [polydata3,]
+    )
 
 
 if __name__ == "__main__":
