@@ -4,6 +4,7 @@ import numpy as np
 import pymeshfix
 import vtk
 from vtk.util import numpy_support
+from pymeshfix import _meshfix
 
 
 def show_polydatas(polydatas, colors=[]):
@@ -64,9 +65,22 @@ def numpy_to_polydata(vertices, faces):
 
 def fix_polydata(polydata):
     vertices, faces = polydata_to_numpy(polydata)
-    meshfix = pymeshfix.MeshFix(vertices, faces[:, 1:])
-    meshfix.repair()
-    fixed_polydata = numpy_to_polydata(meshfix.v, meshfix.f)
+    #  meshfix = pymeshfix.MeshFix(vertices, faces[:, 1:])
+    #  meshfix.repair()
+    tin = _meshfix.PyTMesh()
+    tin.load_array(vertices, faces[:, 1:])
+
+    tin.fill_small_boundaries()
+    print('There are {:d} boundaries'.format(tin.boundaries()))
+
+
+    # Clean (removes self intersections)
+    # tin.clean(max_iters=10, inner_loops=3)
+    # Check mesh for holes again
+    # print('There are {:d} boundaries'.format(tin.boundaries()))
+
+    clean_vertices, clean_faces = tin.return_arrays()
+    fixed_polydata = numpy_to_polydata(clean_vertices, clean_faces)
     return fixed_polydata
 
 
