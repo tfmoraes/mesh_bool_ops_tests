@@ -29,6 +29,7 @@ def show_polydatas(polydatas, colors=[]):
 
     iren = vtk.vtkRenderWindowInteractor()
     iren.SetRenderWindow(ren_win)
+    iren.SetInteractorStyle(vtk.vtkInteractorStyleTrackballCamera())
     iren.Start()
 
 
