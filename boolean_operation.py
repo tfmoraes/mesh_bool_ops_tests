@@ -34,6 +34,19 @@ def show_polydatas(polydatas, colors=[]):
     iren.Start()
 
 
+def save_polydata(polydata, filename):
+    if filename.lower().endswith(".stl"):
+        writer = vtk.vtkSTLWriter()
+    elif filename.lower().endswith(".ply"):
+        writer = vtk.vtkPLYWriter()
+    else:
+        print("File must be STL or PLY")
+        sys.exit(0)
+    writer.SetInputData(polydata)
+    writer.SetFileName(filename)
+    writer.Write()
+
+
 def polydata_to_numpy(polydata):
     vertices = numpy_support.vtk_to_numpy(polydata.GetPoints().GetData())
     vertices.shape = -1, 3
